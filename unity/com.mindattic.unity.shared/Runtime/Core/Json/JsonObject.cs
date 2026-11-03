@@ -143,6 +143,9 @@ namespace Unity.Shared.Core.Json
                 case short s: return JsonNumber.From(s);
                 case byte b: return JsonNumber.From(b);
                 case uint ui: return JsonNumber.From(ui);
+                case sbyte sb: return JsonNumber.From(sb);
+                case ushort us: return JsonNumber.From(us);
+                case ulong ul: return JsonNumber.FromRaw(ul.ToString(CultureInfo.InvariantCulture));
                 case float f: return JsonNumber.From(f);
                 case double d: return JsonNumber.From(d);
                 case decimal m: return JsonNumber.From(m);
@@ -183,7 +186,12 @@ namespace Unity.Shared.Core.Json
         public readonly string Raw;
 
         /// <summary>The number as a double (an out-of-range number reads as an infinity).</summary>
-        public double Value => double.Parse(Raw, NumberStyles.Float, CultureInfo.InvariantCulture);
+        public double Value =>
+            // Unity's Mono/IL2CPP class library (.NET Framework rules) throws OverflowException for an
+            // out-of-range number where .NET Core returns an infinity; Raw is always a valid JSON number,
+            // so a failed parse can only be an overflow.
+            double.TryParse(Raw, NumberStyles.Float, CultureInfo.InvariantCulture, out double d) ? d
+                : Raw.StartsWith("-", StringComparison.Ordinal) ? double.NegativeInfinity : double.PositiveInfinity;
 
         JsonNumber(string raw) => Raw = raw;
 

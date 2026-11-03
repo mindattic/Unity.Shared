@@ -126,10 +126,14 @@ namespace Unity.Shared.Core
             for (int i = 0; i < args.Length; i++)
             {
                 string a = args[i];
+                string value = null;
                 if (string.Equals(a, RootCommandLineSwitch, StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
-                    return args[i + 1];
-                if (a.StartsWith(RootCommandLineSwitch + "=", StringComparison.OrdinalIgnoreCase))
-                    return a.Substring(RootCommandLineSwitch.Length + 1);
+                    value = args[i + 1];
+                else if (a.StartsWith(RootCommandLineSwitch + "=", StringComparison.OrdinalIgnoreCase))
+                    value = a.Substring(RootCommandLineSwitch.Length + 1);
+                // A blank value ("-profiles-root=") is no override, as for the environment variable; passing it
+                // on would make ProfileStore throw from the Unity bootstrap.
+                if (!string.IsNullOrWhiteSpace(value)) return value.Trim();
             }
             return null;
         }

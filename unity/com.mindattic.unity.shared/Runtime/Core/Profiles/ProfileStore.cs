@@ -164,7 +164,16 @@ namespace Unity.Shared.Core
                 // A case-only move is a no-op or an error on case-insensitive file systems: go through a spare name.
                 string spare = Path.Combine(Root, ".rename-" + Guid.NewGuid().ToString("N"));
                 Directory.Move(from, spare);
-                Directory.Move(spare, to);
+                try
+                {
+                    Directory.Move(spare, to);
+                }
+                catch
+                {
+                    // Left under the hidden spare name the profile would vanish from List(): put it back.
+                    Directory.Move(spare, from);
+                    throw;
+                }
             }
             else
             {

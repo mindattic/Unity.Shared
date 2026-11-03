@@ -118,7 +118,12 @@ namespace Unity.Shared.Core
             {
                 if (string.IsNullOrWhiteSpace(value)) { Data.Remove(Keys.DisplayName); return; }
                 value = value.Trim();
-                if (value.Length > MaxDisplayNameLength) value = value.Substring(0, MaxDisplayNameLength).TrimEnd();
+                if (value.Length > MaxDisplayNameLength)
+                {
+                    // Don't cut between the halves of a surrogate pair (an emoji): a lone half is written as U+FFFD.
+                    int cut = char.IsHighSurrogate(value[MaxDisplayNameLength - 1]) ? MaxDisplayNameLength - 1 : MaxDisplayNameLength;
+                    value = value.Substring(0, cut).TrimEnd();
+                }
                 Data.Set(Keys.DisplayName, value);
             }
         }
