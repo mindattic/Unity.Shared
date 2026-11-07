@@ -1,7 +1,7 @@
 # Unity.Shared
-Shared Unity package for every MindAttic game: player profiles with one versioned settings.json each, and the common helpers the games would otherwise copy.
+Shared Unity package for every MindAttic game: player profiles with one versioned settings.json each, a shared `--headless` mode for automated testing, and the common helpers the games would otherwise copy.
 
-![C#](https://img.shields.io/badge/C%23-9.0-239120) ![Unity](https://img.shields.io/badge/Unity-6000.0%2B-black) ![.NET Standard](https://img.shields.io/badge/.NET%20Standard-2.1-512BD4) ![License](https://img.shields.io/badge/license-MIT-blue) ![Status](https://img.shields.io/badge/status-1.0.0-green)
+![C#](https://img.shields.io/badge/C%23-9.0-239120) ![Unity](https://img.shields.io/badge/Unity-6000.0%2B-black) ![.NET Standard](https://img.shields.io/badge/.NET%20Standard-2.1-512BD4) ![License](https://img.shields.io/badge/license-MIT-blue) ![Status](https://img.shields.io/badge/status-1.1.0-green)
 
 ```text
 <persistentDataPath>/Profiles/
@@ -29,6 +29,7 @@ Shared Unity package for every MindAttic game: player profiles with one versione
 - **JSON without a dependency**: a small strict JSON reader/writer that keeps key order and exact number text, behind an injectable `IJsonCodec`.
 - **Root override** for tests and automation: `Profiles.UseRoot(path)`, the `MINDATTIC_PROFILES_ROOT` environment variable or a `-profiles-root <path>` command-line switch.
 - **Session mute** for tests and automation: the `MINDATTIC_CLI_MUTED=1` environment variable or a `-muted` command-line switch (read before the first scene loads, like the root override) mutes all audio for that run only. `CommonSettings` then reports music and SFX muted at volume 0, but settings.json is never written: the player's saved volumes and mutes are untouched. `Profiles.SessionMuted` turns it on or off from code.
+- **Headless mode** for scripted and automated testing, off by default: `--headless` (or `-headless`) or `MINDATTIC_HEADLESS=1` runs the real game muted, in the background, vSync off, and logs one `MINDATTIC_HEADLESS_READY <productName>` line; `Headless.IsActive` / `Headless.WhenActive(...)` let a game add its own opt-ins. `tools/Start-Headless.ps1` launches a built player that way with no window. See [Headless mode](#headless-mode).
 
 ## Quick start
 
@@ -128,6 +129,47 @@ All in `Unity.Shared.Core` (engine-free) unless noted.
 | `Profiles.UseRoot(path)` / `UseDataPath(path)` / `Use(store)` / `Reset()` | Point the facade somewhere (tests, tools). |
 | `new ProfileStore(root, codec)` | A store without the static facade. |
 | `common.GetUnityColor()` / `SetUnityColor(c)`, `rgb.ToUnityColor()` | Unity colour conversions (`Unity.Shared`). |
+| `Headless.IsActive` (get/set), `Headless.WhenActive(cb)`, `Headless.Activated`, `Headless.Reset()` | Headless mode (see [Headless mode](#headless-mode)). |
+| `Headless.Requested(args, envValue)`, `Headless.ReadyLine(name)` | The switch/variable parsing and the ready line. |
+| `HeadlessBootstrap.Apply()` | The package's headless effects (`Unity.Shared`); called for you. |
+
+## Headless mode
+
+One optional launch mode, the same in every MindAttic Unity and Unreal game (Unreal.Shared keeps the same contract): run the real game with no window, drive it from a script, query it. With neither the switch nor the variable set, nothing at all changes.
+
+**Turning it on.** The command-line switch `--headless` (also `-headless`, any case) or the environment variable `MINDATTIC_HEADLESS=1` (`true`/`yes`/`on` also work). It is resolved once, before the first scene loads.
+
+**What the package does when it is on** (`HeadlessBootstrap`; nothing game-specific):
+
+- turns on the session mute (`Profiles.SessionMuted`; settings.json is never written, as with `-muted`);
+- sets `Application.runInBackground = true` and `QualitySettings.vSyncCount = 0`;
+- logs exactly one line, `MINDATTIC_HEADLESS_READY <Application.productName>`, without a stack trace, for scripts to wait on.
+
+**No window is the launcher's job.** Unity picks its window and renderer before any script runs, so the player also needs Unity's own `-batchmode -nographics`. `tools/Start-Headless.ps1` passes them:
+
+```powershell
+# from a game's repo, with Unity.Shared cloned next to it
+& ..\Unity.Shared\tools\Start-Headless.ps1 -Exe Build\Game.exe -Wait -TimeoutSeconds 120 -profiles-root D:\tmp\Profiles
+```
+
+It runs `Game.exe --headless -batchmode -nographics -logFile <path> [your args]`, prints the log path and PID, and returns `{ ProcessId, LogFile, ReadyLine }`. `-LogFile` chooses the log (default `%TEMP%\<exe>-headless-<UTC>.log`). `-Wait` waits for the ready line: exit 1 on timeout (`-StopOnTimeout` also stops the player), exit 2 if the player quits first. Every other argument is passed through to the player.
+
+CI that launches the exe directly passes the same flags itself, then waits for a log line starting with `MINDATTIC_HEADLESS_READY`:
+
+```text
+Game.exe --headless -batchmode -nographics -logFile build/headless.log
+```
+
+**A game's own opt-ins** (skipping the main menu, scripted input) stay in the game, using `Unity.Shared.Core`:
+
+```csharp
+using Unity.Shared.Core;
+
+Headless.WhenActive(() => skipMainMenu = true);   // runs now if headless, or once it is turned on later
+if (Headless.IsActive) { /* ... */ }              // ask at any time
+Headless.Activated += OnHeadless;                  // raw event: fires once when it turns on (usually before game code runs)
+Headless.IsActive = true;                          // override from code (tests, tools); Headless.Reset() forgets it
+```
 
 ## JSON: why the package carries its own
 
@@ -142,12 +184,14 @@ The repo was MindAttic.Unity, then MindAttic.Unity.Shared, and is now Unity.Shar
 ```text
 unity/com.mindattic.unity.shared/
   package.json
-  Runtime/Unity.Shared.asmdef          ProfilesBootstrap (persistentDataPath), Unity colour helpers
+  Runtime/Unity.Shared.asmdef          ProfilesBootstrap (persistentDataPath), HeadlessBootstrap, Unity colour helpers
   Runtime/Core/Unity.Shared.Core.asmdef engine-free
+  Runtime/Core/Headless.cs              the --headless / MINDATTIC_HEADLESS switch
   Runtime/Core/Json/                    MiniJson, JsonObject, IJsonCodec
   Runtime/Core/Profiles/                Profiles, ProfileStore, Profile, ProfileSettings, CommonSettings, RgbColor, AtomicFile
 tests/Core.Build/                       compiles Runtime/Core as netstandard2.1, warnings as errors
-tests/Core.Tests/                       NUnit tests of the format and the profile store
+tests/Core.Tests/                       NUnit tests of the format, the profile store and the headless switch
+tools/Start-Headless.ps1                launches a built player headless, with no window
 ```
 
 ## Testing
@@ -156,7 +200,7 @@ tests/Core.Tests/                       NUnit tests of the format and the profil
 dotnet test tests/Core.Tests
 ```
 
-It builds `Runtime/Core` as Unity does (netstandard2.1, C# 9) first, then runs the NUnit suite: JSON round-trips, unknown-field preservation, defaults, damaged files, atomic writes, name rules, current/select/create/rename/delete-to-trash and the root overrides.
+It builds `Runtime/Core` as Unity does (netstandard2.1, C# 9) first, then runs the NUnit suite: JSON round-trips, unknown-field preservation, defaults, damaged files, atomic writes, name rules, current/select/create/rename/delete-to-trash, the root overrides, and the headless switch parsing and override.
 
 ## Documentation
 
