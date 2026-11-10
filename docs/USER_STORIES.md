@@ -37,3 +37,6 @@ _Nothing recorded yet._
 | MAU-T14 | 2026-10-27 | chore | closed | Save the standard Unity app icon as a shared asset for future builds | b5969e3 |
 | MAU-T15 | 2026-10-29 | chore | open | Rename Unity.Shared to Unity.Rea.Shared everywhere: folder, GitHub, namespaces, docs, deployments (identifies it as reverse-engineered) | — |
 | MAU-T16 | 2026-10-31 | docs | closed | Update USER_STORIES.md | — |
+| MAU-T17 | 2026-11-02 | fix | closed | Bughunt sweep, two passes: find and fix real bugs across tracked source (user request 2026-11-02) | — |
+| MAU-T18 | 2026-11-06 | feature | closed | A shared, off-by-default --headless mode every MindAttic Unity game gets from the package | f51d7c5 HeadlessTests (124 passing); Unity 6000.4.3f1 player build run headless/off/env |
+| MAU-T19 | 2026-11-10 | chore | closed | Crash recovery: commit the command-catalog sync (.agent/commands/*.md) and regenerated docs/USER_STORIES.md left uncommitted by the session crash | — |
