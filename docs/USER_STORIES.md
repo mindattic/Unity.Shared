@@ -40,3 +40,7 @@ _Nothing recorded yet._
 | MAU-T17 | 2026-11-02 | fix | closed | Bughunt sweep, two passes: find and fix real bugs across tracked source (user request 2026-11-02) | — |
 | MAU-T18 | 2026-11-06 | feature | closed | A shared, off-by-default --headless mode every MindAttic Unity game gets from the package | f51d7c5 HeadlessTests (124 passing); Unity 6000.4.3f1 player build run headless/off/env |
 | MAU-T19 | 2026-11-10 | chore | closed | Crash recovery: commit the command-catalog sync (.agent/commands/*.md) and regenerated docs/USER_STORIES.md left uncommitted by the session crash | — |
+| MAU-T20 | 2026-11-22 | chore | open | Rename the root namespace Unity.Shared to Unity.Rea.Shared across .cs, .asmdef, .csproj/.sln files and Unity assembly settings, and update docs/comments in this repo | — |
+| MAU-T21 | 2026-11-22 | chore | open | Rename the GitHub repo to Unity.Rea.Shared, update the origin remote, and rename the local folder to D:\Projects\MindAttic\Unity.Rea.Shared | — |
+| MAU-T22 | 2026-11-22 | chore | open | Update Orchestrator, Tickets, Launcher, Browser and other repos/CI/deploy scripts that hardcode the old Unity.Shared name, then verify build and tests | — |
+| MAU-T23 | 2026-11-22 | docs | closed | 2026-11-22 morning | — |
